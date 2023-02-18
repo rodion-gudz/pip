@@ -146,9 +146,9 @@ class InstallRequirement:
         # Set to True after successful installation
         self.install_succeeded: Optional[bool] = None
         # Supplied options
-        self.install_options = install_options if install_options else []
-        self.global_options = global_options if global_options else []
-        self.hash_options = hash_options if hash_options else {}
+        self.install_options = install_options or []
+        self.global_options = global_options or []
+        self.hash_options = hash_options or {}
         self.config_settings = config_settings
         # Set to True after successful preparation of this requirement
         self.prepared = False
@@ -189,7 +189,7 @@ class InstallRequirement:
         if self.req:
             s = str(self.req)
             if self.link:
-                s += " from {}".format(redact_auth_from_url(self.link.url))
+                s += f" from {redact_auth_from_url(self.link.url)}"
         elif self.link:
             s = redact_auth_from_url(self.link.url)
         else:
@@ -228,9 +228,7 @@ class InstallRequirement:
     # Things that are valid for all kinds of requirements?
     @property
     def name(self) -> Optional[str]:
-        if self.req is None:
-            return None
-        return self.req.name
+        return None if self.req is None else self.req.name
 
     @functools.lru_cache()  # use cached_property in python 3.8+
     def supports_pyproject_editable(self) -> bool:
@@ -311,7 +309,7 @@ class InstallRequirement:
             else:
                 comes_from = self.comes_from.from_path()
             if comes_from:
-                s += "->" + comes_from
+                s += f"->{comes_from}"
         return s
 
     def ensure_build_location(
@@ -407,24 +405,10 @@ class InstallRequirement:
         if not existing_dist:
             return
 
-        version_compatible = self.req.specifier.contains(
+        if version_compatible := self.req.specifier.contains(
             existing_dist.version,
             prereleases=True,
-        )
-        if not version_compatible:
-            self.satisfied_by = None
-            if use_user_site:
-                if existing_dist.in_usersite:
-                    self.should_reinstall = True
-                elif running_under_virtualenv() and existing_dist.in_site_packages:
-                    raise InstallationError(
-                        f"Will not install to the user site because it will "
-                        f"lack sys.path precedence to {existing_dist.raw_name} "
-                        f"in {existing_dist.location}"
-                    )
-            else:
-                self.should_reinstall = True
-        else:
+        ):
             if self.editable:
                 self.should_reinstall = True
                 # when installing editables, nothing pre-existing should ever
@@ -433,12 +417,26 @@ class InstallRequirement:
             else:
                 self.satisfied_by = existing_dist
 
+        else:
+            self.satisfied_by = None
+            if use_user_site and existing_dist.in_usersite or not use_user_site:
+                self.should_reinstall = True
+            elif (
+                use_user_site
+                and not existing_dist.in_usersite
+                and running_under_virtualenv()
+                and existing_dist.in_site_packages
+            ):
+                raise InstallationError(
+                    f"Will not install to the user site because it will "
+                    f"lack sys.path precedence to {existing_dist.raw_name} "
+                    f"in {existing_dist.location}"
+                )
+
     # Things valid for wheels
     @property
     def is_wheel(self) -> bool:
-        if not self.link:
-            return False
-        return self.link.is_wheel
+        return self.link.is_wheel if self.link else False
 
     # Things valid for sdists
     @property
@@ -450,16 +448,12 @@ class InstallRequirement:
     @property
     def setup_py_path(self) -> str:
         assert self.source_dir, f"No source dir for {self}"
-        setup_py = os.path.join(self.unpacked_source_directory, "setup.py")
-
-        return setup_py
+        return os.path.join(self.unpacked_source_directory, "setup.py")
 
     @property
     def setup_cfg_path(self) -> str:
         assert self.source_dir, f"No source dir for {self}"
-        setup_cfg = os.path.join(self.unpacked_source_directory, "setup.cfg")
-
-        return setup_cfg
+        return os.path.join(self.unpacked_source_directory, "setup.cfg")
 
     @property
     def pyproject_toml_path(self) -> str:
@@ -675,7 +669,7 @@ class InstallRequirement:
 
         path = os.path.join(parentdir, path)
         name = _clean_zip_name(path, rootdir)
-        return self.name + "/" + name
+        return f"{self.name}/{name}"
 
     def archive(self, build_dir: Optional[str]) -> None:
         """Saves archive to provided build_dir.
@@ -687,13 +681,12 @@ class InstallRequirement:
             return
 
         create_archive = True
-        archive_name = "{}-{}.zip".format(self.name, self.metadata["version"])
+        archive_name = f'{self.name}-{self.metadata["version"]}.zip'
         archive_path = os.path.join(build_dir, archive_name)
 
         if os.path.exists(archive_path):
             response = ask_path_exists(
-                "The file {} exists. (i)gnore, (w)ipe, "
-                "(b)ackup, (a)bort ".format(display_path(archive_path)),
+                f"The file {display_path(archive_path)} exists. (i)gnore, (w)ipe, (b)ackup, (a)bort ",
                 ("i", "w", "b", "a"),
             )
             if response == "i":
@@ -730,7 +723,7 @@ class InstallRequirement:
                         parentdir=dirpath,
                         rootdir=dir,
                     )
-                    zipdir = zipfile.ZipInfo(dir_arcname + "/")
+                    zipdir = zipfile.ZipInfo(f"{dir_arcname}/")
                     zipdir.external_attr = 0x1ED << 16  # 0o755
                     zip_output.writestr(zipdir, "")
                 for filename in filenames:
@@ -887,19 +880,16 @@ def check_invalid_constraint_type(req: InstallRequirement) -> str:
 def _has_option(options: Values, reqs: List[InstallRequirement], option: str) -> bool:
     if getattr(options, option, None):
         return True
-    for req in reqs:
-        if getattr(req, option, None):
-            return True
-    return False
+    return any(getattr(req, option, None) for req in reqs)
 
 
 def _install_option_ignored(
     install_options: List[str], reqs: List[InstallRequirement]
 ) -> bool:
-    for req in reqs:
-        if (install_options or req.install_options) and not req.use_pep517:
-            return False
-    return True
+    return not any(
+        (install_options or req.install_options) and not req.use_pep517
+        for req in reqs
+    )
 
 
 class LegacySetupPyOptionsCheckMode(Enum):

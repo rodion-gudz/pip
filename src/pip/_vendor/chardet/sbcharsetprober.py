@@ -93,10 +93,11 @@ class SingleByteCharSetProber(CharSetProber):
 
     def feed(self, byte_str: Union[bytes, bytearray]) -> ProbingState:
         # TODO: Make filter_international_words keep things in self.alphabet
-        if not self._model.keep_ascii_letters:
-            byte_str = self.filter_international_words(byte_str)
-        else:
-            byte_str = self.remove_xml_tags(byte_str)
+        byte_str = (
+            self.remove_xml_tags(byte_str)
+            if self._model.keep_ascii_letters
+            else self.filter_international_words(byte_str)
+        )
         if not byte_str:
             return self.state
         char_to_order_map = self._model.char_to_order_map
@@ -114,30 +115,33 @@ class SingleByteCharSetProber(CharSetProber):
                 self._freq_char += 1
                 if self._last_order < self.SAMPLE_SIZE:
                     self._total_seqs += 1
-                    if not self._reversed:
-                        lm_cat = language_model[self._last_order][order]
-                    else:
-                        lm_cat = language_model[order][self._last_order]
+                    lm_cat = (
+                        language_model[order][self._last_order]
+                        if self._reversed
+                        else language_model[self._last_order][order]
+                    )
                     self._seq_counters[lm_cat] += 1
             self._last_order = order
 
         charset_name = self._model.charset_name
-        if self.state == ProbingState.DETECTING:
-            if self._total_seqs > self.SB_ENOUGH_REL_THRESHOLD:
-                confidence = self.get_confidence()
-                if confidence > self.POSITIVE_SHORTCUT_THRESHOLD:
-                    self.logger.debug(
-                        "%s confidence = %s, we have a winner", charset_name, confidence
-                    )
-                    self._state = ProbingState.FOUND_IT
-                elif confidence < self.NEGATIVE_SHORTCUT_THRESHOLD:
-                    self.logger.debug(
-                        "%s confidence = %s, below negative shortcut threshold %s",
-                        charset_name,
-                        confidence,
-                        self.NEGATIVE_SHORTCUT_THRESHOLD,
-                    )
-                    self._state = ProbingState.NOT_ME
+        if (
+            self.state == ProbingState.DETECTING
+            and self._total_seqs > self.SB_ENOUGH_REL_THRESHOLD
+        ):
+            confidence = self.get_confidence()
+            if confidence > self.POSITIVE_SHORTCUT_THRESHOLD:
+                self.logger.debug(
+                    "%s confidence = %s, we have a winner", charset_name, confidence
+                )
+                self._state = ProbingState.FOUND_IT
+            elif confidence < self.NEGATIVE_SHORTCUT_THRESHOLD:
+                self.logger.debug(
+                    "%s confidence = %s, below negative shortcut threshold %s",
+                    charset_name,
+                    confidence,
+                    self.NEGATIVE_SHORTCUT_THRESHOLD,
+                )
+                self._state = ProbingState.NOT_ME
 
         return self.state
 

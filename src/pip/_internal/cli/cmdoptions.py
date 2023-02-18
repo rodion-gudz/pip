@@ -91,12 +91,11 @@ def check_dist_restriction(options: Values, check_target: bool = False) -> None:
             ":none:)."
         )
 
-    if check_target:
-        if dist_restriction_set and not options.target_dir:
-            raise CommandError(
-                "Can not use any platform or abi specific options unless "
-                "installing via '--target'"
-            )
+    if check_target and dist_restriction_set and not options.target_dir:
+        raise CommandError(
+            "Can not use any platform or abi specific options unless "
+            "installing via '--target'"
+        )
 
 
 def _path_option_check(option: Option, opt: str, value: str) -> str:
@@ -641,14 +640,12 @@ def add_target_python_options(cmd_opts: OptionGroup) -> None:
 
 
 def make_target_python(options: Values) -> TargetPython:
-    target_python = TargetPython(
+    return TargetPython(
         platforms=options.platforms,
         py_version_info=options.python_version,
         abis=options.abis,
         implementation=options.implementation,
     )
-
-    return target_python
 
 
 def prefer_binary() -> Option:
@@ -905,15 +902,11 @@ def _handle_merge_hash(
         algo, digest = value.split(":", 1)
     except ValueError:
         parser.error(
-            "Arguments to {} must be a hash name "  # noqa
-            "followed by a value, like --hash=sha256:"
-            "abcde...".format(opt_str)
+            f"Arguments to {opt_str} must be a hash name followed by a value, like --hash=sha256:abcde..."
         )
     if algo not in STRONG_HASHES:
         parser.error(
-            "Allowed hash algorithms for {} are {}.".format(  # noqa
-                opt_str, ", ".join(STRONG_HASHES)
-            )
+            f'Allowed hash algorithms for {opt_str} are {", ".join(STRONG_HASHES)}.'
         )
     parser.values.hashes.setdefault(algo, []).append(digest)
 

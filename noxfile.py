@@ -134,13 +134,17 @@ def docs(session: nox.Session) -> None:
         return [
             "sphinx-build",
             "-W",
-            "-c", "docs/html",  # see note above
-            "-d", "docs/build/doctrees/" + kind,
-            "-b", kind,
-            "docs/" + kind,
-            "docs/build/" + kind,
+            "-c",
+            "docs/html",
+            "-d",
+            f"docs/build/doctrees/{kind}",
+            "-b",
+            kind,
+            f"docs/{kind}",
+            f"docs/build/{kind}",
         ]
-        # fmt: on
+            # fmt: on
+
 
     session.run(*get_sphinx_build_command("html"))
     session.run(*get_sphinx_build_command("man"))
@@ -235,7 +239,7 @@ def vendoring(session: nox.Session) -> None:
         message = f"Upgrade {name} to {new_version}"
 
         # Write our news fragment
-        news_file = Path("news") / (name + ".vendor.rst")
+        news_file = Path("news") / f"{name}.vendor.rst"
         news_file.write_text(message + "\n")  # "\n" appeases end-of-line-fixer
 
         # Commit the changes

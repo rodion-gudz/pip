@@ -76,12 +76,12 @@ setup(
     entry_points={
         "console_scripts": [
             "pip=pip._internal.cli.main:main",
-            "pip{}=pip._internal.cli.main:main".format(sys.version_info[0]),
-            "pip{}.{}=pip._internal.cli.main:main".format(*sys.version_info[:2]),
-        ],
+            f"pip{sys.version_info[0]}=pip._internal.cli.main:main",
+            "pip{}.{}=pip._internal.cli.main:main".format(
+                *sys.version_info[:2]
+            ),
+        ]
     },
     zip_safe=False,
-    # NOTE: python_requires is duplicated in __pip-runner__.py.
-    # When changing this value, please change the other copy as well.
     python_requires=">=3.7",
 )

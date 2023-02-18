@@ -26,9 +26,11 @@ def _looks_like_wheel(location: str) -> bool:
         return False
     if not os.path.isfile(location):
         return False
-    if not Wheel.wheel_file_re.match(os.path.basename(location)):
-        return False
-    return zipfile.is_zipfile(location)
+    return (
+        zipfile.is_zipfile(location)
+        if Wheel.wheel_file_re.match(os.path.basename(location))
+        else False
+    )
 
 
 class _DistributionFinder:
@@ -77,10 +79,7 @@ class _DistributionFinder:
         The path can be either a directory, or a ZIP archive.
         """
         for dist, info_location in self._find_impl(location):
-            if info_location is None:
-                installed_location: Optional[BasePath] = None
-            else:
-                installed_location = info_location.parent
+            installed_location = None if info_location is None else info_location.parent
             yield Distribution(dist, info_location, installed_location)
 
     def find_linked(self, location: str) -> Iterator[BaseDistribution]:
@@ -165,17 +164,13 @@ class Environment(BaseEnvironment):
 
     @classmethod
     def from_paths(cls, paths: Optional[List[str]]) -> BaseEnvironment:
-        if paths is None:
-            return cls(sys.path)
-        return cls(paths)
+        return cls(sys.path) if paths is None else cls(paths)
 
     def _iter_distributions(self) -> Iterator[BaseDistribution]:
         finder = _DistributionFinder()
         for location in self._paths:
             yield from finder.find(location)
-            for dist in finder.find_eggs(location):
-                # _emit_egg_deprecation(dist.location)  # TODO: Enable this.
-                yield dist
+            yield from finder.find_eggs(location)
             # This must go last because that's how pkg_resources tie-breaks.
             yield from finder.find_linked(location)
 

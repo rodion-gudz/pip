@@ -139,11 +139,10 @@ def call_subprocess(
         env.pop(name, None)
     try:
         proc = subprocess.Popen(
-            # Convert HiddenText objects to the underlying str.
             reveal_command_args(cmd),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT if not stdout_only else subprocess.PIPE,
+            stderr=subprocess.PIPE if stdout_only else subprocess.STDOUT,
             cwd=cwd,
             env=env,
             errors="backslashreplace",
@@ -206,7 +205,7 @@ def call_subprocess(
             error = InstallationSubprocessError(
                 command_description=command_desc,
                 exit_code=proc.returncode,
-                output_lines=all_output if not showing_subprocess else None,
+                output_lines=None if showing_subprocess else all_output,
             )
             if log_failed_cmd:
                 subprocess_logger.error("[present-rich] %s", error)
@@ -229,9 +228,7 @@ def call_subprocess(
                 proc.returncode,
                 cwd,
             )
-        elif on_returncode == "ignore":
-            pass
-        else:
+        elif on_returncode != "ignore":
             raise ValueError(f"Invalid value: on_returncode={on_returncode!r}")
     return output
 

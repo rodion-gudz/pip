@@ -29,16 +29,18 @@ def _showwarning(
     file: Optional[TextIO] = None,
     line: Optional[str] = None,
 ) -> None:
-    if file is not None:
-        if _original_showwarning is not None:
-            _original_showwarning(message, category, filename, lineno, file, line)
-    elif issubclass(category, PipDeprecationWarning):
+    if (
+        file is not None
+        and _original_showwarning is not None
+        or file is None
+        and not issubclass(category, PipDeprecationWarning)
+    ):
+        _original_showwarning(message, category, filename, lineno, file, line)
+    elif file is None:
         # We use a specially named logger which will handle all of the
         # deprecation messages for pip.
         logger = logging.getLogger("pip._internal.deprecations")
         logger.warning(message)
-    else:
-        _original_showwarning(message, category, filename, lineno, file, line)
 
 
 def install_warning_logger() -> None:
@@ -87,9 +89,9 @@ def deprecated(
         (reason, f"{DEPRECATION_MSG_PREFIX}{{}}"),
         (
             gone_in,
-            "pip {} will enforce this behaviour change."
-            if not is_gone
-            else "Since pip {}, this is no longer supported.",
+            "Since pip {}, this is no longer supported."
+            if is_gone
+            else "pip {} will enforce this behaviour change.",
         ),
         (
             replacement,
@@ -97,9 +99,9 @@ def deprecated(
         ),
         (
             feature_flag,
-            "You can use the flag --use-feature={} to test the upcoming behaviour."
-            if not is_gone
-            else None,
+            None
+            if is_gone
+            else "You can use the flag --use-feature={} to test the upcoming behaviour.",
         ),
         (
             issue,

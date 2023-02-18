@@ -45,10 +45,11 @@ def _is_broken_pipe_error(exc_class: Type[BaseException], exc: BaseException) ->
     # On Windows, a broken pipe can show up as EINVAL rather than EPIPE:
     # https://bugs.python.org/issue19612
     # https://bugs.python.org/issue30418
-    if not WINDOWS:
-        return False
-
-    return isinstance(exc, OSError) and exc.errno in (errno.EINVAL, errno.EPIPE)
+    return (
+        isinstance(exc, OSError) and exc.errno in (errno.EINVAL, errno.EPIPE)
+        if WINDOWS
+        else False
+    )
 
 
 @contextlib.contextmanager
@@ -99,10 +100,7 @@ class IndentingFormatter(logging.Formatter):
             # Then the message already has a prefix.  We don't want it to
             # look like "WARNING: DEPRECATION: ...."
             return ""
-        if levelno < logging.ERROR:
-            return "WARNING: "
-
-        return "ERROR: "
+        return "WARNING: " if levelno < logging.ERROR else "ERROR: "
 
     def format(self, record: logging.LogRecord) -> str:
         """
@@ -113,9 +111,7 @@ class IndentingFormatter(logging.Formatter):
         message_start = self.get_message_start(formatted, record.levelno)
         formatted = message_start + formatted
 
-        prefix = ""
-        if self.add_timestamp:
-            prefix = f"{self.formatTime(record)} "
+        prefix = f"{self.formatTime(record)} " if self.add_timestamp else ""
         prefix += " " * get_indentation()
         formatted = "".join([prefix + line for line in formatted.splitlines(True)])
         return formatted

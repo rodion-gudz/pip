@@ -26,11 +26,7 @@ class PipNewsInclude(rst.Directive):
         """Find a ==== line that marks the version section title."""
         if prev is None:
             return False
-        if re.match(r"^=+$", curr) is None:
-            return False
-        if len(curr) < len(prev):
-            return False
-        return True
+        return False if re.match(r"^=+$", curr) is None else len(curr) >= len(prev)
 
     def _iter_lines_with_refs(self, lines: Iterable[str]) -> Iterator[str]:
         """Transform the input lines to add a ref before each section title.
@@ -118,7 +114,7 @@ class PipOptions(rst.Directive):
         if option._short_opts:
             line += option._short_opts[0]
         if option._short_opts and option._long_opts:
-            line += ", " + option._long_opts[0]
+            line += f", {option._long_opts[0]}"
         elif option._long_opts:
             line += option._long_opts[0]
         if option.takes_value():
@@ -130,7 +126,7 @@ class PipOptions(rst.Directive):
         opt_help = option.help.replace("%default", str(option.default))
         # fix paths with sys.prefix
         opt_help = opt_help.replace(sys.prefix, "<sys.prefix>")
-        return [bookmark_line, "", line, "", "    " + opt_help, ""]
+        return [bookmark_line, "", line, "", f"    {opt_help}", ""]
 
     def _format_options(
         self, options: Iterable[optparse.Option], cmd_name: Optional[str] = None
@@ -193,15 +189,11 @@ class PipReqFileOptionsReference(PipOptions):
 
             opt = option()
             opt_name = opt._long_opts[0]
-            if opt._short_opts:
-                short_opt_name = "{}, ".format(opt._short_opts[0])
-            else:
-                short_opt_name = ""
-
+            short_opt_name = f"{opt._short_opts[0]}, " if opt._short_opts else ""
             if option in cmdoptions.general_group["options"]:
                 prefix = ""
             else:
-                prefix = "{}_".format(self.determine_opt_prefix(opt_name))
+                prefix = f"{self.determine_opt_prefix(opt_name)}_"
 
             self.view_list.append(
                 "*  :ref:`{short}{long}<{prefix}{opt_name}>`".format(
@@ -280,13 +272,15 @@ class PipCLIDirective(rst.Directive):
             for pattern, substitution in substitution_pipeline:
                 content = re.sub(pattern, substitution, content)
 
-            # Write the tab
-            lines.append(f"````{{tab}} {os}")
-            lines.append(f"```{highlighter}")
-            lines.append(f"{content}")
-            lines.append("```")
-            lines.append("````")
-
+            lines.extend(
+                (
+                    f"````{{tab}} {os}",
+                    f"```{highlighter}",
+                    f"{content}",
+                    "```",
+                    "````",
+                )
+            )
         string_list = StringList(lines)
         self.state.nested_parse(string_list, 0, node)
         return [node]
