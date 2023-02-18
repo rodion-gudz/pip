@@ -64,13 +64,17 @@ class UTF8Prober(CharSetProber):
             if coding_state == MachineState.ITS_ME:
                 self._state = ProbingState.FOUND_IT
                 break
-            if coding_state == MachineState.START:
-                if self.coding_sm.get_current_charlen() >= 2:
-                    self._num_mb_chars += 1
+            if (
+                coding_state == MachineState.START
+                and self.coding_sm.get_current_charlen() >= 2
+            ):
+                self._num_mb_chars += 1
 
-        if self.state == ProbingState.DETECTING:
-            if self.get_confidence() > self.SHORTCUT_THRESHOLD:
-                self._state = ProbingState.FOUND_IT
+        if (
+            self.state == ProbingState.DETECTING
+            and self.get_confidence() > self.SHORTCUT_THRESHOLD
+        ):
+            self._state = ProbingState.FOUND_IT
 
         return self.state
 

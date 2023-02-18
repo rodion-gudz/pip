@@ -26,14 +26,10 @@ __all__ = ['interpret']
 _VERSION_PATTERN = re.compile(r'((\d+(\.\d+)*\w*)|\'(\d+(\.\d+)*\w*)\'|\"(\d+(\.\d+)*\w*)\")')
 
 def _is_literal(o):
-    if not isinstance(o, string_types) or not o:
-        return False
-    return o[0] in '\'"'
+    return o[0] in '\'"' if isinstance(o, string_types) and o else False
 
 def _get_versions(s):
-    result = []
-    for m in _VERSION_PATTERN.finditer(s):
-        result.append(NV(m.groups()[0]))
+    result = [NV(m.groups()[0]) for m in _VERSION_PATTERN.finditer(s)]
     return set(result)
 
 class Evaluator(object):
@@ -64,19 +60,19 @@ class Evaluator(object):
         if isinstance(expr, string_types):
             if expr[0] in '\'"':
                 result = expr[1:-1]
-            else:
-                if expr not in context:
-                    raise SyntaxError('unknown variable: %s' % expr)
+            elif expr in context:
                 result = context[expr]
+            else:
+                raise SyntaxError(f'unknown variable: {expr}')
         else:
             assert isinstance(expr, dict)
             op = expr['op']
             if op not in self.operations:
-                raise NotImplementedError('op not implemented: %s' % op)
+                raise NotImplementedError(f'op not implemented: {op}')
             elhs = expr['lhs']
             erhs = expr['rhs']
-            if _is_literal(expr['lhs']) and _is_literal(expr['rhs']):
-                raise SyntaxError('invalid comparison: %s %s %s' % (elhs, op, erhs))
+            if _is_literal(elhs) and _is_literal(erhs):
+                raise SyntaxError(f'invalid comparison: {elhs} {op} {erhs}')
 
             lhs = self.evaluate(elhs, context)
             rhs = self.evaluate(erhs, context)
@@ -94,7 +90,7 @@ _DIGITS = re.compile(r'\d+\.\d+')
 
 def default_context():
     def format_full_version(info):
-        version = '%s.%s.%s' % (info.major, info.minor, info.micro)
+        version = f'{info.major}.{info.minor}.{info.micro}'
         kind = info.releaselevel
         if kind != 'final':
             version += kind[0] + str(info.serial)
@@ -143,10 +139,10 @@ def interpret(marker, execution_context=None):
     try:
         expr, rest = parse_marker(marker)
     except Exception as e:
-        raise SyntaxError('Unable to interpret marker syntax: %s: %s' % (marker, e))
+        raise SyntaxError(f'Unable to interpret marker syntax: {marker}: {e}')
     if rest and rest[0] != '#':
-        raise SyntaxError('unexpected trailing data in marker: %s: %s' % (marker, rest))
+        raise SyntaxError(f'unexpected trailing data in marker: {marker}: {rest}')
     context = dict(DEFAULT_CONTEXT)
     if execution_context:
-        context.update(execution_context)
+        context |= execution_context
     return evaluator.evaluate(expr, context)

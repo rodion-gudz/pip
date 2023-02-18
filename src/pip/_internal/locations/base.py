@@ -34,11 +34,11 @@ def change_root(new_root: str, pathname: str) -> str:
     This is borrowed from Python's standard library's distutils module.
     """
     if os.name == "posix":
-        if not os.path.isabs(pathname):
-            return os.path.join(new_root, pathname)
-        else:
-            return os.path.join(new_root, pathname[1:])
-
+        return (
+            os.path.join(new_root, pathname[1:])
+            if os.path.isabs(pathname)
+            else os.path.join(new_root, pathname)
+        )
     elif os.name == "nt":
         (drive, path) = os.path.splitdrive(pathname)
         if path[0] == "\\":

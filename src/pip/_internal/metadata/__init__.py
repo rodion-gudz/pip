@@ -46,7 +46,7 @@ def _should_use_importlib_metadata() -> bool:
         return False
     import importlib.metadata
 
-    return bool(getattr(importlib.metadata, "_PIP_USE_IMPORTLIB_METADATA", True))
+    return getattr(importlib.metadata, "_PIP_USE_IMPORTLIB_METADATA", True)
 
 
 class Backend(Protocol):

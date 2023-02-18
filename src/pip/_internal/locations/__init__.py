@@ -326,7 +326,10 @@ def get_scheme(
         # /usr/local instead of /usr. Debian also places lib in dist-packages
         # instead of site-packages, but the /usr/local check should cover it.
         skip_linux_system_special_case = (
-            not (user or home or prefix or running_under_virtualenv())
+            not user
+            and not home
+            and not prefix
+            and not running_under_virtualenv()
             and old_v.parts[1:3] == ("usr", "local")
             and len(new_v.parts) > 1
             and new_v.parts[1] == "usr"
@@ -430,11 +433,11 @@ def _looks_like_deb_system_dist_packages(value: str) -> bool:
     we can't do anything about this Debian bug, and this detection allows us to
     skip the warning when needed.
     """
-    if not _looks_like_debian_scheme():
-        return False
-    if value == "/usr/lib/python3/dist-packages":
-        return True
-    return False
+    return (
+        value == "/usr/lib/python3/dist-packages"
+        if _looks_like_debian_scheme()
+        else False
+    )
 
 
 def get_purelib() -> str:

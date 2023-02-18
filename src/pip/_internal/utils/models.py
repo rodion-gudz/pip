@@ -33,7 +33,8 @@ class KeyBasedCompareMixin:
         return self._compare(other, operator.__eq__)
 
     def _compare(self, other: Any, method: Callable[[Any, Any], bool]) -> bool:
-        if not isinstance(other, self._defining_class):
-            return NotImplemented
-
-        return method(self._compare_key, other._compare_key)
+        return (
+            method(self._compare_key, other._compare_key)
+            if isinstance(other, self._defining_class)
+            else NotImplemented
+        )

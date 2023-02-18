@@ -42,11 +42,13 @@ class ShowCommand(Command):
         query = args
 
         results = search_packages_info(query)
-        if not print_results(
-            results, list_files=options.files, verbose=options.verbose
-        ):
-            return ERROR
-        return SUCCESS
+        return (
+            SUCCESS
+            if print_results(
+                results, list_files=options.files, verbose=options.verbose
+            )
+            else ERROR
+        )
 
 
 class _PackageInfo(NamedTuple):
@@ -110,11 +112,7 @@ def search_packages_info(query: List[str]) -> Generator[_PackageInfo, None, None
             entry_points = []
 
         files_iter = dist.iter_declared_entries()
-        if files_iter is None:
-            files: Optional[List[str]] = None
-        else:
-            files = sorted(files_iter)
-
+        files = None if files_iter is None else sorted(files_iter)
         metadata = dist.metadata
 
         yield _PackageInfo(
