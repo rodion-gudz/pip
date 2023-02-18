@@ -96,6 +96,17 @@ class ListCommand(IndexGroupCommand):
                 "pip only finds stable versions."
             ),
         )
+        self.cmd_opts.add_option(
+            "--allow-unverified",
+            dest="allow_unverified",
+            action="store_true",
+            default=False,
+            help=(
+                "The --allow-unverified option allows installation of unverified "
+                "Python packages from PyPI, but it can pose security risks and "
+                "should only be used if necessary and with caution."
+            ),
+        )
 
         self.cmd_opts.add_option(
             "--format",

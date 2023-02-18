@@ -874,6 +874,17 @@ pre: Callable[..., Option] = partial(
     "pip only finds stable versions.",
 )
 
+allow_unverified: Callable[..., Option] = partial(
+    Option,
+    "--allow-unverified",
+    dest="allow_unverified",
+    action="store_true",
+    default=False,
+    help="The --allow-unverified option allows installation of unverified "
+         "Python packages from PyPI, but it can pose security risks and "
+         "should only be used if necessary and with caution.",
+)
+
 disable_pip_version_check: Callable[..., Option] = partial(
     Option,
     "--disable-pip-version-check",

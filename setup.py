@@ -48,7 +48,7 @@ setup(
     url="https://pip.pypa.io/",
     project_urls={
         "Documentation": "https://pip.pypa.io",
-        "Source": "https://github.com/pypa/pip",
+        "Source": "https://github.com/rodion-gudz/pip",
         "Changelog": "https://pip.pypa.io/en/stable/news/",
     },
     author="The pip developers",
@@ -72,6 +72,7 @@ setup(
             "w64.exe",
             "w64-arm.exe",
         ],
+        "pip._internal.cli": ["critical_packages.json"],
     },
     entry_points={
         "console_scripts": [

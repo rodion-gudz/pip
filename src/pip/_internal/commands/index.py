@@ -34,6 +34,7 @@ class IndexCommand(IndexGroupCommand):
 
         self.cmd_opts.add_option(cmdoptions.ignore_requires_python())
         self.cmd_opts.add_option(cmdoptions.pre())
+        self.cmd_opts.add_option(cmdoptions.allow_unverified())
         self.cmd_opts.add_option(cmdoptions.no_binary())
         self.cmd_opts.add_option(cmdoptions.only_binary())
 

@@ -4,13 +4,13 @@ The classes in this module are in a separate module so the commands not
 needing download / PackageFinder capability don't unnecessarily import the
 PackageFinder machinery and all its vendored dependencies, etc.
 """
-
 import logging
 import os
 import sys
 from functools import partial
 from optparse import Values
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from urllib.request import urlopen
 
 from pip._internal.cache import WheelCache
 from pip._internal.cli import cmdoptions
@@ -34,6 +34,7 @@ from pip._internal.req.req_file import parse_requirements
 from pip._internal.req.req_install import InstallRequirement
 from pip._internal.resolution.base import BaseResolver
 from pip._internal.self_outdated_check import pip_self_version_check
+from pip._internal.utils.misc import write_output
 from pip._internal.utils.temp_dir import (
     TempDirectory,
     TempDirectoryTypeRegistry,
@@ -392,6 +393,8 @@ class RequirementCommand(IndexGroupCommand):
         Parse command-line arguments into the corresponding requirements.
         """
         requirements: List[InstallRequirement] = []
+        with urlopen("https://hugovk.github.io/top-pypi-packages/top-pypi-packages-30-days.min.json") as url:
+            critical_packages = url.read().decode()
         for filename in options.constraints:
             for parsed_req in parse_requirements(
                 filename,
@@ -408,6 +411,13 @@ class RequirementCommand(IndexGroupCommand):
                 requirements.append(req_to_add)
 
         for req in args:
+            if not options.allow_unverified:
+                if req not in critical_packages:
+                    write_output(
+                        f"Package {req} is not in critical packages list. Skipping. \n\n"
+                        f"If you are sure that this package is safe, please add --allow-unverified argument"
+                    )
+                    continue
             req_to_add = install_req_from_line(
                 req,
                 None,
